@@ -111,10 +111,7 @@ func (a *adapter) Receive(msg *hal.Message) error {
 func (a *adapter) newMessage(msg *hipchat.Message) *hal.Message {
 	hal.Logger.Debug(msg)
 	from := strings.Split(msg.From, "/")
-	fmt.Println(from)
-	user, _ := a.Robot.Users.GetByName(from[1])
-	fmt.Println(user)
-	fmt.Println(msg.Body)
+	user, _ := a.Robot.Users.Get(from[0])
 
 	return &hal.Message{
 		User: user,
@@ -139,7 +136,7 @@ func (a *adapter) startConnection() error {
 	}
 
 	client.Status("chat")
-
+	hal.Logger.Debug("client Id", client.Id)
 	client.RequestUsers()
 	for _, user := range <-client.Users() {
 		// retrieve the name and mention name of our bot from the server
@@ -158,16 +155,9 @@ func (a *adapter) startConnection() error {
 			},
 		}
 		hal.Logger.Debugf("found User %v", newUser)
-		// Prepopulate our users map because we can easily do so.
-		// If a user doesn't exist, set it.
-		u, err := a.Robot.Users.Get(user.Id)
-		if err != nil {
-			a.Robot.Users.Set(user.Id, newUser)
-		}
-		// If the user doesn't match completely (say, if someone changes their name),
-		// then adjust what we have stored.
-		if u.Name != user.Name || mentionName(&u) != user.MentionName {
-			a.Robot.Users.Set(user.Id, newUser)
+		a.Robot.Users.Set(user.Id, newUser)
+		if _, err := a.Robot.Users.Get(user.Id); err != nil {
+			panic(fmt.Sprintf("User add fail: %v", user))
 		}
 	}
 
