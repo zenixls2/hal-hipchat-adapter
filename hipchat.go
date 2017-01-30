@@ -70,7 +70,15 @@ func (a *adapter) Stop() error {
 // Send sends a regular response
 func (a *adapter) Send(res *hal.Response, strings ...string) error {
 	for _, str := range strings {
-		a.client.Say(res.Message.Room, a.name, str)
+		hal.Logger.Debug(res.Message.Room)
+		user, err := a.Robot.Users.Get(res.Message.Room)
+		if err != nil {
+			// cannot find RoomID in Users, so this should be a real room
+			a.client.Say(res.Message.Room, a.name, str)
+		} else {
+			// Found user, we should send using private msg
+			a.client.PrivSay(user.ID, a.name, str)
+		}
 	}
 	return nil
 }
@@ -126,11 +134,10 @@ func (a *adapter) newMessage(msg *hipchat.Message) *hal.Message {
 	// they use different templates.
 	// need to implement something else to fetch only body to
 	// user defined methods
-	hal.Logger.Debug(hal.Message{
-		User: user,
-		Room: from[0],
-		Text: "@" + hal.Config.Alias + ": " + msg.Body,
-	})
+	hal.Logger.Debugf("User: %v, Room: %s, Text: %s\n",
+		user,
+		from[0],
+		"@"+hal.Config.Alias+": "+msg.Body)
 
 	return &hal.Message{
 		User: user,
