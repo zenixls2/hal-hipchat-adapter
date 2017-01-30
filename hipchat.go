@@ -229,7 +229,6 @@ func (a *adapter) startConnection() error {
 		}
 
 		msg := a.newMessage(message)
-		hal.Logger.Debug("generated", msg)
 		a.Receive(msg)
 	}
 	return nil
