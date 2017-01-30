@@ -5,6 +5,7 @@ import (
 	"github.com/daneharrigan/hipchat"
 	"github.com/danryan/env"
 	"github.com/danryan/hal"
+	"regexp"
 	"strings"
 )
 
@@ -49,6 +50,7 @@ func New(robot *hal.Robot) (hal.Adapter, error) {
 			}
 		}(),
 	}
+	robot.Adapter = a
 	a.SetRobot(robot)
 	return a, nil
 }
@@ -75,6 +77,7 @@ func (a *adapter) Send(res *hal.Response, strings ...string) error {
 
 // Reply sends a direct response
 func (a *adapter) Reply(res *hal.Response, strings ...string) error {
+	hal.Logger.Debug("resultrply: ", strings)
 	newStrings := make([]string, len(strings))
 	for _, str := range strings {
 		s := fmt.Sprintf("@%s: %s", mentionName(res.Envelope.User), str)
@@ -102,6 +105,13 @@ func (a *adapter) Play(res *hal.Response, strings ...string) error {
 // Receive forwards a message to the robot
 func (a *adapter) Receive(msg *hal.Message) error {
 	hal.Logger.Debug("hipchat - adapter received message")
+	// this is part of the code for debuging purpose extract from hal.
+	resp := hal.NewResponseFromMessage(a.Robot, msg)
+	for _, h := range a.Robot.Handlers() {
+		respondRegexpTemplate := fmt.Sprintf(`^(?:@?(?:%s|%s)[:,]?)\s+(?:${1})`, hal.Config.Alias, hal.Config.Name)
+		reg := regexp.MustCompile(strings.Replace(respondRegexpTemplate, "${1}", h.(*hal.Handler).Pattern, 1))
+		hal.Logger.Debug((h.(*hal.Handler)).Pattern, resp.Message.Text, reg.FindAllStringSubmatch(resp.Message.Text, -1))
+	}
 	a.Robot.Receive(msg)
 	hal.Logger.Debug("hipchat - adapter sent message to robot")
 
@@ -112,11 +122,20 @@ func (a *adapter) newMessage(msg *hipchat.Message) *hal.Message {
 	hal.Logger.Debug(msg)
 	from := strings.Split(msg.From, "/")
 	user, _ := a.Robot.Users.Get(from[0])
+	// notice there's a difference for Handler and FullHandler in regexp.
+	// they use different templates.
+	// need to implement something else to fetch only body to
+	// user defined methods
+	hal.Logger.Debug(hal.Message{
+		User: user,
+		Room: from[0],
+		Text: "@" + hal.Config.Alias + ": " + msg.Body,
+	})
 
 	return &hal.Message{
 		User: user,
 		Room: from[0],
-		Text: msg.Body,
+		Text: "@" + hal.Config.Alias + ": " + msg.Body,
 	}
 }
 
