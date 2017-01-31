@@ -2,9 +2,9 @@ package hal_hipchat_adapter
 
 import (
 	"fmt"
-	"github.com/daneharrigan/hipchat"
 	"github.com/danryan/env"
 	"github.com/danryan/hal"
+	"github.com/zenixls2/hipchat"
 	"regexp"
 	"strings"
 )
@@ -161,7 +161,7 @@ func (a *adapter) startConnection() error {
 		return err
 	}
 
-	client.Status("chat")
+	client.Status("chat", "", "")
 	hal.Logger.Debug("client Id", client.Id)
 	client.RequestUsers()
 	for _, user := range <-client.Users() {
@@ -195,7 +195,7 @@ func (a *adapter) startConnection() error {
 		roomJids[room.Name] = room.Id
 		hal.Logger.Debugf("found Room %s : %s", room.Name, room.Id)
 	}
-	client.Status("chat")
+	client.Status("chat", "", "")
 	// Only join the rooms we want
 	if len(a.rooms) > 0 {
 		for name, room := range a.rooms {
